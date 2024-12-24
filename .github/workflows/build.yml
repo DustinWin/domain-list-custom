@@ -102,6 +102,7 @@ jobs:
           DOMAIN,metacubex.github.io
           DOMAIN,metacubexd.pages.dev
           EOF
+          sed -e 's/^full:/DOMAIN,/' -e 's/^domain:/DOMAIN-SUFFIX,/' -e 's/^keyword:/DOMAIN-KEYWORD,/' -e 's/^regexp:/DOMAIN-REGEX,/' ./publish/private.txt >> ./tmp/temp-private.txt
           curl -sSL ${private1} | grep -Ev '#|IP-' >> ./tmp/temp-private.txt
           curl -sSL ${private2} | grep -i '\.[A-Z]' | awk -F'[/:]' '{print $4}' | sed 's/^/DOMAIN,/' >> ./tmp/temp-private.txt
           sort --ignore-case -u ./tmp/temp-private.txt > ./domains/private.list
