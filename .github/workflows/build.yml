@@ -101,6 +101,7 @@ jobs:
           DOMAIN,d.metacubex.one
           DOMAIN,metacubex.github.io
           DOMAIN,metacubexd.pages.dev
+          DOMAIN,board.zash.run.place
           EOF
           sed -e 's/^full:/DOMAIN,/' -e 's/^domain:/DOMAIN-SUFFIX,/' -e 's/^keyword:/DOMAIN-KEYWORD,/' -e 's/^regexp:/DOMAIN-REGEX,/' ./publish/private.txt >> ./tmp/temp-private.txt
           curl -sSL ${private1} | grep -Ev '#|IP-' >> ./tmp/temp-private.txt
