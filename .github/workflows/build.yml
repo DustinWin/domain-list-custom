@@ -1,0 +1,234 @@
+name: Build domains
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 18 * * *"
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - "**/README.md"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set variables
+        run: |
+          echo "update_version=$(date -d '+8 hours' +%Y-%m-%d)" >> ${GITHUB_ENV}
+          echo "fakeip_filter=https://raw.githubusercontent.com/juewuy/ShellCrash/dev/public/fake_ip_filter.list" >> $GITHUB_ENV
+          echo "applications1=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Download/Download.list" >> $GITHUB_ENV
+          echo "applications2=https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/applications.txt" >> $GITHUB_ENV
+          echo "private1=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Lan/Lan.list" >> $GITHUB_ENV
+          echo "private2=https://raw.githubusercontent.com/XIU2/TrackersListCollection/master/all.txt" >> $GITHUB_ENV
+          echo "ads=https://raw.githubusercontent.com/privacy-protection-tools/anti-AD/master/anti-ad-clash.yaml" >> $GITHUB_ENV
+          echo "games_cn1=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/SteamCN/SteamCN.list" >> $GITHUB_ENV
+          echo "games_cn2=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownloadCN/GameDownloadCN.list" >> $GITHUB_ENV
+          echo "netflix=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Netflix/Netflix.list" >> $GITHUB_ENV
+          echo "disney=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Disney/Disney.list" >> $GITHUB_ENV
+          echo "max=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/HBO/HBO.list" >> $GITHUB_ENV
+          echo "primevideo=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/PrimeVideo/PrimeVideo.list" >> $GITHUB_ENV
+          echo "appletv=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/AppleTV/AppleTV.list" >> $GITHUB_ENV
+          echo "youtube=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/YouTube/YouTube.list" >> $GITHUB_ENV
+          echo "tiktok=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/TikTok/TikTok.list" >> $GITHUB_ENV
+          echo "bilibili=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/BiliBili/BiliBili.list" >> $GITHUB_ENV
+          echo "ai1=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/OpenAI/OpenAI.list" >> $GITHUB_ENV
+          echo "ai2=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Copilot/Copilot.list" >> $GITHUB_ENV
+          echo "ai3=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Gemini/Gemini.list" >> $GITHUB_ENV
+          echo "ai4=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Claude/Claude.list" >> $GITHUB_ENV
+          echo "networktest=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Speedtest/Speedtest.list" >> $GITHUB_ENV
+          echo "proxy=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Global/Global.list" >> $GITHUB_ENV
+          echo "cn=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ChinaMax/ChinaMax.list" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Checkout codebase
+        uses: actions/checkout@master
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ./go.mod
+
+      - name: Checkout v2fly/domain-list-community
+        uses: actions/checkout@v4
+        with:
+          repository: v2fly/domain-list-community
+          path: community
+
+      - name: Append attribute domains
+        run: |
+          echo "include:geolocation-!cn @cn" >> ./community/data/cn
+          echo "include:geolocation-cn @!cn" >> ./community/data/geolocation-\!cn
+
+      - name: Generate `mihomo` geosite.dat and domains(.txt files)
+        run: |
+          go run ./ --datapath=./community/data/
+
+      - name: Generate fakeip-filter
+        run: |
+          mkdir -p ./tmp/ ./domains/
+          curl -sSL ${fakeip_filter} | grep -Ev '#|\+|\*|Mijia' | sed 's/^/DOMAIN,/' > ./tmp/temp-fakeip-filter.txt
+          curl -sSL ${fakeip_filter} | grep -v '.\*' | grep -E '\*|\+' | sed 's/^[*+]\./DOMAIN-SUFFIX,/' >> ./tmp/temp-fakeip-filter.txt
+          curl -sSL ${fakeip_filter} | grep '.\*' | grep -E '\*|\+' | sed -e 's/^*/.\*/' -e 's/^+/.\+/' -e 's/^/DOMAIN-REGEX,/' >> ./tmp/temp-fakeip-filter.txt
+          sort --ignore-case ./tmp/temp-fakeip-filter.txt > ./domains/fakeip-filter.list
+
+      - name: Generate fakeip-filter-lite
+        run: |
+          cat <<EOF > ./tmp/temp-fakeip-filter-lite.txt
+          DOMAIN,adguardteam.github.io
+          DOMAIN,adrules.top
+          DOMAIN,anti-ad.net
+          DOMAIN,local.adguard.org
+          DOMAIN,static.adtidy.org
+          DOMAIN-SUFFIX,market.xiaomi.com
+          DOMAIN-SUFFIX,steamcontent.com
+          EOF
+          curl -sSL ${fakeip_filter} | grep -E 'ntp|time|stun' | grep -v '.\*' | grep -E '\*|\+' | sed 's/^[*+]\./DOMAIN-SUFFIX,/' >> ./tmp/temp-fakeip-filter-lite.txt
+          curl -sSL ${fakeip_filter} | grep -E 'ntp|time|stun' | grep '.\*' | grep -E '\*|\+' | sed -e 's/^*/.\*/' -e 's/^+/.\+/' -e 's/^/DOMAIN-REGEX,/' >> ./tmp/temp-fakeip-filter-lite.txt
+          sort --ignore-case ./tmp/temp-fakeip-filter-lite.txt > ./domains/fakeip-filter-lite.list
+
+      - name: Generate applications
+        run: |
+          curl -sSL ${applications1} | grep -Ev '#|IP-' > ./tmp/temp-applications.txt
+          curl -sSL ${applications2} | grep -v 'payload:' | sed -e 's/^[ \t]*- //' >> ./tmp/temp-applications.txt
+          sort --ignore-case -u ./tmp/temp-applications.txt > ./domains/applications.list
+
+      - name: Generate private
+        run: |
+          cat <<EOF > ./tmp/temp-private.txt
+          DOMAIN,yacd.haishan.me
+          DOMAIN,yacd.metacubex.one
+          DOMAIN,d.metacubex.one
+          DOMAIN,metacubex.github.io
+          DOMAIN,metacubexd.pages.dev
+          DOMAIN,board.zash.run.place
+          EOF
+          sed -e 's/^full:/DOMAIN,/' -e 's/^domain:/DOMAIN-SUFFIX,/' -e 's/^keyword:/DOMAIN-KEYWORD,/' -e 's/^regexp:/DOMAIN-REGEX,/' ./publish/private.txt >> ./tmp/temp-private.txt
+          curl -sSL ${private1} | grep -Ev '#|IP-' >> ./tmp/temp-private.txt
+          curl -sSL ${private2} | grep -i '\.[A-Z]' | awk -F'[/:]' '{print $4}' | sed 's/^/DOMAIN,/' >> ./tmp/temp-private.txt
+          sort --ignore-case -u ./tmp/temp-private.txt > ./domains/private.list
+
+      - name: Generate ads
+        run: |
+          curl -sSL ${ads} | grep -Ev '#|payload:' | sed -e '/^\s*$/d' -e "s/'$//" -e 's/^[ \t]*//' -e "s/^- '+\./DOMAIN-SUFFIX,/" -e "s/^- '/DOMAIN,/" | sort --ignore-case > ./domains/ads.list
+
+      - name: Generate microsoft-cn
+        run: |
+          grep '@cn$' ./publish/microsoft.txt | sed -e 's/^full:/DOMAIN,/' -e 's/^domain:/DOMAIN-SUFFIX,/' -e 's/^keyword:/DOMAIN-KEYWORD,/' -e 's/^regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' | sort --ignore-case > ./domains/microsoft-cn.list
+
+      - name: Generate apple-cn
+        run: |
+          grep '@cn$' ./publish/apple.txt | sed -e 's/^full:/DOMAIN,/' -e 's/^domain:/DOMAIN-SUFFIX,/' -e 's/^keyword:/DOMAIN-KEYWORD,/' -e 's/^regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' | sort --ignore-case > ./domains/apple-cn.list
+
+      - name: Generate google-cn
+        run: |
+          grep '@cn$' ./publish/google.txt | sed -e 's/^full:/DOMAIN,/' -e 's/^domain:/DOMAIN-SUFFIX,/' -e 's/^keyword:/DOMAIN-KEYWORD,/' -e 's/^regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' | sort --ignore-case > ./domains/google-cn.list
+
+      - name: Generate games-cn
+        run: |
+          grep '@cn$' ./publish/category-games.txt | sed -e 's/^full:/DOMAIN,/' -e 's/^domain:/DOMAIN-SUFFIX,/' -e 's/^keyword:/DOMAIN-KEYWORD,/' -e 's/^regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' > ./tmp/temp-games-cn.txt
+          curl -sSL ${games_cn1} | grep -Ev '#|IP-' >> ./tmp/temp-games-cn.txt
+          curl -sSL ${games_cn2} | grep -Ev '#|IP-' >> ./tmp/temp-games-cn.txt
+          sort --ignore-case -u ./tmp/temp-games-cn.txt > ./domains/games-cn.list
+
+      - name: Generate netflix
+        run: |
+          curl -sSL ${netflix} | grep -Ev '#|IP-' | sort --ignore-case > ./domains/netflix.list
+
+      - name: Generate disney
+        run: |
+          curl -sSL ${disney} | grep -Ev '#|IP-' | sort --ignore-case > ./domains/disney.list
+
+      - name: Generate max
+        run: |
+          curl -sSL ${max} | grep -Ev '#|IP-' | sort --ignore-case > ./domains/max.list
+
+      - name: Generate primevideo
+        run: |
+          curl -sSL ${primevideo} | grep -Ev '#|IP-' | sort --ignore-case > ./domains/primevideo.list
+
+      - name: Generate appletv
+        run: |
+          curl -sSL ${appletv} | grep -Ev '#|IP-' | sort --ignore-case > ./domains/appletv.list
+
+      - name: Generate youtube
+        run: |
+          curl -sSL ${youtube} | grep -Ev '#|IP-' | sort --ignore-case > ./domains/youtube.list
+
+      - name: Generate tiktok
+        run: |
+          curl -sSL ${tiktok} | grep -Ev '#|IP-' | sort --ignore-case > ./domains/tiktok.list
+
+      - name: Generate bilibili
+        run: |
+          curl -sSL ${bilibili} | grep -Ev '#|IP-' | sort --ignore-case > ./domains/bilibili.list
+
+      - name: Generate ai
+        run: |
+          curl -sSL ${ai1} | grep -Ev '#|IP-' > ./tmp/temp-ai.txt
+          curl -sSL ${ai2} | grep -Ev '#|IP-' >> ./tmp/temp-ai.txt
+          curl -sSL ${ai3} | grep -Ev '#|IP-' >> ./tmp/temp-ai.txt
+          curl -sSL ${ai4} | grep -Ev '#|IP-' >> ./tmp/temp-ai.txt
+          sort --ignore-case -u ./tmp/temp-ai.txt > ./domains/ai.list
+
+      - name: Generate networktest
+        run: |
+          cat <<EOF > ./tmp/temp-networktest.txt
+          DOMAIN-KEYWORD,ipv6-test
+          DOMAIN-KEYWORD,ipv6test
+          DOMAIN-KEYWORD,test-ipv6
+          DOMAIN-KEYWORD,testipv6
+          EOF
+          curl -sSL ${networktest} | grep -Ev '#|IP-' >> ./tmp/temp-networktest.txt
+          sort --ignore-case -u ./tmp/temp-networktest.txt > ./domains/networktest.list
+
+      - name: Generate proxy
+        run: |
+          sed -e 's/^full:/DOMAIN,/' -e 's/^domain:/DOMAIN-SUFFIX,/' -e 's/^keyword:/DOMAIN-KEYWORD,/' -e 's/^regexp:/DOMAIN-REGEX,/' -e 's/:@\!cn$//' ./publish/geolocation-\!cn.txt >> ./tmp/temp-proxy.txt
+          curl -sSL ${proxy} | grep -Ev '#|IP-' >> ./tmp/temp-proxy.txt
+          sort --ignore-case -u ./tmp/temp-proxy.txt > ./domains/proxy.list
+
+      - name: Generate cn
+        run: |
+          sed -e 's/^full:/DOMAIN,/' -e 's/^domain:/DOMAIN-SUFFIX,/' -e 's/^keyword:/DOMAIN-KEYWORD,/' -e 's/^regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' ./publish/cn.txt > ./tmp/temp-cn.txt
+          curl -sSL ${cn} | grep -Ev '#|IP-' >> ./tmp/temp-cn.txt
+          sort --ignore-case -u ./tmp/temp-cn.txt > ./domains/cn.list
+          rm -rf ./tmp* ./publish*
+
+      - name: Release and upload `domains` assets
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          release_name: domains
+          tag: domains
+          overwrite: true
+          body: |
+            [mihomo](https://github.com/MetaCubeX/mihomo) rule-set 规则集文件，规则类型包含 `DOMAIN`、`DOMAIN-SUFFIX`、`DOMAIN-KEYWORD`、`DOMAIN-REGEX` 和 `PROCESS-NAME`
+            规则集文件更新于 ${{ env.update_version }}
+          file_glob: true
+          file: ./domains/*
+
+      - name: Git push assets to `domains` branch
+        run: |
+          cd ./domains/ || exit 1
+          git init
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b domains
+          git add . && git commit -m "mihomo rule-set 规则集文件更新于 ${update_version}"
+          git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push -f -u origin domains
+
+      - name: Purge jsDelivr CDN
+        run: |
+          cd ./domains/ || exit 1
+          for file in $(ls); do
+            curl -i "https://purge.jsdelivr.net/gh/${{ github.repository }}@domains/${file}"
+          done
+
+      - name: Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: 3
+          keep_minimum_runs: 1
