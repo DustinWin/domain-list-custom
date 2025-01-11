@@ -216,7 +216,7 @@ jobs:
           git checkout -b domains
           git add . && git commit -m "mihomo rule-set 规则集文件更新于 ${update_version}"
           git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
-          git push -f -u origin domains
+          git push -f origin domains
 
       - name: Purge jsDelivr CDN
         run: |
