@@ -79,7 +79,6 @@ jobs:
           DOMAIN,anti-ad.net
           DOMAIN,local.adguard.org
           DOMAIN,static.adtidy.org
-          DOMAIN-SUFFIX,market.xiaomi.com
           DOMAIN-SUFFIX,steamcontent.com
           EOF
           curl -sSL ${fakeip_filter} | grep -E 'ntp|time|stun' | grep -v '.\*' | grep -E '\*|\+' | sed 's/^[*+]\./DOMAIN-SUFFIX,/' >> ./tmp/temp-fakeip-filter-lite.txt
