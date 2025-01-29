@@ -4,7 +4,7 @@ go 1.23.5
 
 require (
 	github.com/v2fly/v2ray-core/v5 v5.25.1
-	google.golang.org/protobuf v1.36.3
+	google.golang.org/protobuf v1.36.4
 )
 
 require (
