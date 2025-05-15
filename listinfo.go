@@ -3,11 +3,9 @@ package main
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"os"
 	"sort"
 	"strings"
-	"time"
 
 	router "github.com/v2fly/v2ray-core/v5/app/router/routercommon"
 )
@@ -323,40 +321,4 @@ func (l *ListInfo) ToPlainText() []byte {
 	}
 
 	return plaintextBytes
-}
-
-// ToGFWList converts router.GeoSite to GFWList format.
-func (l *ListInfo) ToGFWList() []byte {
-	loc, _ := time.LoadLocation("Asia/Shanghai")
-	timeString := fmt.Sprintf("! Last Modified: %s\n", time.Now().In(loc).Format(time.RFC1123))
-
-	gfwlistBytes := make([]byte, 0, 1024*512)
-	gfwlistBytes = append(gfwlistBytes, []byte("[AutoProxy 0.2.9]\n")...)
-	gfwlistBytes = append(gfwlistBytes, []byte(timeString)...)
-	gfwlistBytes = append(gfwlistBytes, []byte("! Expires: 24h\n")...)
-	gfwlistBytes = append(gfwlistBytes, []byte("! HomePage: https://github.com/Loyalsoldier/domain-list-custom\n")...)
-	gfwlistBytes = append(gfwlistBytes, []byte("! GitHub URL: https://raw.githubusercontent.com/Loyalsoldier/domain-list-custom/release/gfwlist.txt\n")...)
-	gfwlistBytes = append(gfwlistBytes, []byte("! jsdelivr URL: https://cdn.jsdelivr.net/gh/Loyalsoldier/domain-list-custom@release/gfwlist.txt\n")...)
-	gfwlistBytes = append(gfwlistBytes, []byte("\n")...)
-
-	for _, rule := range l.GeoSite.Domain {
-		ruleVal := strings.TrimSpace(rule.GetValue())
-		if len(ruleVal) == 0 {
-			continue
-		}
-
-		switch rule.Type {
-		case router.Domain_Full:
-			gfwlistBytes = append(gfwlistBytes, []byte("|http://"+ruleVal+"\n")...)
-			gfwlistBytes = append(gfwlistBytes, []byte("|https://"+ruleVal+"\n")...)
-		case router.Domain_RootDomain:
-			gfwlistBytes = append(gfwlistBytes, []byte("||"+ruleVal+"\n")...)
-		case router.Domain_Plain:
-			gfwlistBytes = append(gfwlistBytes, []byte(ruleVal+"\n")...)
-		case router.Domain_Regex:
-			gfwlistBytes = append(gfwlistBytes, []byte("/"+ruleVal+"/\n")...)
-		}
-	}
-
-	return gfwlistBytes
 }
