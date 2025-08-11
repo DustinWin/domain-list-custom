@@ -14,8 +14,8 @@ var (
 	dataPath     = flag.String("datapath", filepath.Join("./", "data"), "Path to your custom 'data' directory")
 	datName      = flag.String("datname", "geosite.dat", "Name of the generated dat file")
 	outputPath   = flag.String("outputpath", "./publish", "Output path to the generated files")
-	exportLists  = flag.String("exportlists", "private,microsoft,apple,google,category-games,netflix,disney,hbo,primevideo,apple-tvplus,youtube,tiktok,bilibili,spotify,category-ai-!cn,speedtest,tld-!cn,geolocation-!cn,cn", "Lists to be exported in plaintext format, separated by ',' comma")
-	excludeAttrs = flag.String("excludeattrs", "private@ads,microsoft@ads,apple@ads,google@ads,category-games@ads,netflix@ads,disney@ads,hbo@ads,primevideo@ads,apple-tvplus@ads,youtube@ads,tiktok@ads,bilibili@ads,spotify@ads,category-ai-!cn@ads,speedtest@ads,tld-!cn@cn@ads,geolocation-!cn@cn@ads,cn@!cn@ads", "Exclude rules with certain attributes in certain lists, seperated by ',' comma, support multiple attributes in one list. Example: geolocation-!cn@cn@ads,geolocation-cn@!cn")
+	exportLists  = flag.String("exportlists", "private,microsoft,apple,google,category-game-accelerator-cn,category-game-platforms-download,category-games-cn,netflix,disney,hbo,primevideo,apple-tvplus,youtube,tiktok,bilibili,spotify,category-games-!cn,category-ai-!cn,category-speedtest,tld-!cn,geolocation-!cn,cn", "Lists to be exported in plaintext format, separated by ',' comma")
+	excludeAttrs = flag.String("excludeattrs", "private@ads,microsoft@ads,apple@ads,google@ads,category-game-accelerator-cn@ads,category-game-platforms-download@ads,category-games-cn@ads,netflix@ads,disney@ads,hbo@ads,primevideo@ads,apple-tvplus@ads,youtube@ads,tiktok@ads,bilibili@ads,spotify@ads,category-games-!cn@ads,category-ai-!cn@ads,category-speedtest@ads,tld-!cn@ads,geolocation-!cn@cn@ads,cn@!cn@ads", "Exclude rules with certain attributes in certain lists, seperated by ',' comma, support multiple attributes in one list. Example: geolocation-!cn@cn@ads,geolocation-cn@!cn")
 )
 
 func main() {

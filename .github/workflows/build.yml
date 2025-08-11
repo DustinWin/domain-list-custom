@@ -77,10 +77,11 @@ jobs:
       - name: Generate fakeip-filter
         run: |
           mkdir -p ./tmp/ ./domains/
-          curl -sSL ${fakeip_filter} | grep -v '.\*' | grep -E '\*|\+' | sed 's/^[*+]\.//' | sort --ignore-case > ./tmp/temp-fakeip-filter-suffix.txt
+          curl -sSL ${fakeip_filter} | grep -v '.\*' | grep -E '\*|\+' | sed 's/^[*+]\.//' | sort --ignore-case > ./tmp/fakeip-filter-suffix.txt
 
           curl -sSL ${fakeip_filter} | grep -Ev '#|\+|\*|Mijia' | sed 's/^/DOMAIN,/' > ./tmp/temp-fakeip-filter-other.txt
-          curl -sSL ${fakeip_filter} | grep '.\*' | grep -E '\*|\+' | sed -e 's/^*/.\*/' -e 's/^+/.\+/' -e 's/^/DOMAIN-REGEX,/' | sort --ignore-case >> ./tmp/temp-fakeip-filter-other.txt
+          curl -sSL ${fakeip_filter} | grep '.\*' | grep -E '\*|\+' | sed -e 's/^*/.\*/' -e 's/^+/.\+/' -e 's/^/DOMAIN-REGEX,/' >> ./tmp/temp-fakeip-filter-other.txt
+          sort --ignore-case ./tmp/temp-fakeip-filter-other.txt > ./tmp/fakeip-filter-other.txt
 
       - name: Generate fakeip-filter-lite
         run: |
@@ -97,24 +98,9 @@ jobs:
 
       - name: Generate private
         run: |
-          grep 'domain:' ./publish/private.txt | sed 's/domain://' > ./tmp/temp-private-suffix.txt
-          curl -sSL ${private} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-private-suffix.txt
-
-      - name: Generate ads
-        run: |
-          curl -sSL ${ads} | grep -Ev '#|payload:' | sed -e '/^\s*$/d' -e "s/'$//" -e 's/^[ \t]*//' -e "s/^- '+\./DOMAIN-SUFFIX,/" -e "s/^- '/DOMAIN,/" | sort --ignore-case > ./domains/ads.list
-
-      - name: Generate trackerslist
-        run: |
-          curl -sSL ${trackerslist1} | grep -i '\.[A-Z]' | awk -F'[/:]' '{print $4}' | sed 's/^/DOMAIN,/' > ./tmp/temp-trackerslist.txt
-          curl -sSL ${trackerslist2} | grep -i '\.[A-Z]' | awk -F'[/:]' '{print $4}' | sed 's/^/DOMAIN,/' >> ./tmp/temp-trackerslist.txt
-          sort --ignore-case -u ./tmp/temp-trackerslist.txt > ./domains/trackerslist.list
-
-      - name: Generate applications
-        run: |
-          curl -sSL ${applications1} | grep -Ev '#|IP-' > ./tmp/temp-applications.txt
-          curl -sSL ${applications2} | grep -v 'payload:' | sed -e 's/^[ \t]*- //' >> ./tmp/temp-applications.txt
-          sort --ignore-case ./tmp/temp-applications.txt > ./domains/applications.list
+          cat ./publish/private.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-private-suffix.txt
+          curl -sSL ${private} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-private-suffix.txt
+          sort --ignore-case -u ./tmp/temp-private-suffix.txt > ./tmp/private-suffix.txt
 
           cat <<EOF > ./tmp/temp-private-other.txt
           DOMAIN,yacd.haishan.me
@@ -124,135 +110,204 @@ jobs:
           DOMAIN,metacubexd.pages.dev
           DOMAIN,board.zash.run.place
           EOF
-          grep -v 'domain:' ./publish/private.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' >> ./tmp/temp-private-other.txt
-          curl -sSL ${private} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-private-other.txt
+          cat ./publish/private.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' >> ./tmp/temp-private-other.txt
+          curl -sSL ${private} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-private-other.txt
+          sort --ignore-case -u ./tmp/temp-private-other.txt > ./tmp/private-other.txt
+
+      - name: Generate ads
+        run: |
+          curl -sSL ${ads} | perl -ne "/'([^']+)'/ && print \"\$1\n\"" | sed -e '/^+\./! s/^/DOMAIN,/' -e 's/^+\./DOMAIN-SUFFIX,/' | sort --ignore-case > ./domains/ads.list
+
+      - name: Generate trackerslist
+        run: |
+          curl -sSL ${trackerslist1} | grep -i '\.[A-Z]' | awk -F'[/:]' '{print $4}' | sed 's/^/DOMAIN,/' > ./tmp/temp-trackerslist.txt
+          curl -sSL ${trackerslist2} | grep -i '\.[A-Z]' | awk -F'[/:]' '{print $4}' | sed 's/^/DOMAIN,/' >> ./tmp/temp-trackerslist.txt
+          sort --ignore-case -u ./tmp/temp-trackerslist.txt > ./domains/trackerslist.list
+
+      - name: Generate applications
+        run: |
+          curl -sSL ${applications1} | grep -Ev '#|IP-CIDR' > ./tmp/temp-applications.txt
+          curl -sSL ${applications2} | grep -v 'payload:' | sed 's/^[ \t]*- //' >> ./tmp/temp-applications.txt
+          sort --ignore-case -u ./tmp/temp-applications.txt > ./domains/applications.list
 
       - name: Generate microsoft-cn
         run: |
-          grep '@cn$' ./publish/microsoft.txt | sed -e 's/full:/DOMAIN,/' -e 's/domain:/DOMAIN-SUFFIX,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' | sort --ignore-case > ./domains/microsoft-cn.list
+          cat ./publish/microsoft.txt | grep '@cn$' | sed -e 's/full:/DOMAIN,/' -e 's/domain:/DOMAIN-SUFFIX,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' | sort --ignore-case > ./domains/microsoft-cn.list
 
       - name: Generate apple-cn
         run: |
-          grep '@cn$' ./publish/apple.txt | grep 'domain:' | sed -e 's/domain://' -e 's/:@cn$//' | sort --ignore-case -u > ./tmp/temp-apple-cn-suffix.txt
+          cat ./publish/apple.txt | grep '@cn$' | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/apple-cn-suffix.txt
 
-          grep '@cn$' ./publish/apple.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' > ./tmp/temp-apple-cn-other.txt
-          curl -sSL ${apple_cn} | grep 'server=' | awk -F'/' '{print $2}' | sed 's/^/DOMAIN,/' | sort --ignore-case -u >> ./tmp/temp-apple-cn-other.txt
+          cat ./publish/apple.txt | grep '@cn$' | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' > ./tmp/temp-apple-cn-other.txt
+          curl -sSL ${apple_cn} | grep 'server=' | awk -F'/' '{print $2}' | sed 's/^/DOMAIN,/' >> ./tmp/temp-apple-cn-other.txt
+          sort --ignore-case -u ./tmp/temp-apple-cn-other.txt > ./tmp/apple-cn-other.txt
 
       - name: Generate google-cn
         run: |
-          grep '@cn$' ./publish/google.txt | grep 'domain:' | sed -e 's/domain://' -e 's/:@cn$//' | sort --ignore-case -u > ./tmp/temp-google-cn-suffix.txt
+          cat ./publish/google.txt | grep '@cn$' | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/google-cn-suffix.txt
 
-          grep '@cn$' ./publish/google.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' > ./tmp/temp-google-cn-other.txt
-          curl -sSL ${google_cn} | grep 'server=' | awk -F'/' '{print $2}' | sed 's/^/DOMAIN,/' | sort --ignore-case -u >> ./tmp/temp-google-cn-other.txt
+          cat ./publish/google.txt | grep '@cn$' | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' > ./tmp/temp-google-cn-other.txt
+          curl -sSL ${google_cn} | grep 'server=' | awk -F'/' '{print $2}' | sed 's/^/DOMAIN,/' >> ./tmp/temp-google-cn-other.txt
+          sort --ignore-case -u ./tmp/temp-google-cn-other.txt > ./tmp/google-cn-other.txt
 
       - name: Generate games-cn
         run: |
-          grep '@cn$' ./publish/category-games.txt | grep 'domain:' | sed -e 's/domain://' -e 's/:@cn$//' > ./tmp/temp-games-cn-suffix.txt
+          cat ./publish/category-game-accelerator-cn.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-games-cn-suffix.txt
+          cat ./publish/category-game-platforms-download.txt | grep '@cn$' | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' >> ./tmp/temp-games-cn-suffix.txt
+          cat ./publish/category-games-cn.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' >> ./tmp/temp-games-cn-suffix.txt
           curl -sSL ${games_cn1} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-games-cn-suffix.txt
-          curl -sSL ${games_cn2} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-games-cn-suffix.txt
+          curl -sSL ${games_cn2} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-games-cn-suffix.txt
+          sort --ignore-case -u ./tmp/temp-games-cn-suffix.txt > ./tmp/games-cn-suffix.txt
 
-          grep '@cn$' ./publish/category-games.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' > ./tmp/temp-games-cn-other.txt
-          curl -sSL ${games_cn1} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' >> ./tmp/temp-games-cn-other.txt
-          curl -sSL ${games_cn2} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-games-cn-other.txt
+          cat ./publish/category-game-accelerator-cn.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' > ./tmp/temp-games-cn-other.txt
+          cat ./publish/category-game-platforms-download.txt | grep '@cn$' | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' >> ./tmp/temp-games-cn-other.txt
+          cat ./publish/category-games-cn.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' >> ./tmp/temp-games-cn-other.txt
+          curl -sSL ${games_cn1} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-games-cn-other.txt
+          curl -sSL ${games_cn2} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-games-cn-other.txt
+          sort --ignore-case -u ./tmp/temp-games-cn-other.txt > ./tmp/games-cn-other.txt
 
       - name: Generate netflix
         run: |
-          grep 'domain:' ./publish/netflix.txt | sed 's/domain://' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-netflix-suffix.txt
-          curl -sSL ${netflix} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-netflix-suffix.txt
+          cat ./publish/netflix.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-netflix-suffix.txt
+          curl -sSL ${netflix} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-netflix-suffix.txt
+          sort --ignore-case -u ./tmp/temp-netflix-suffix.txt > ./tmp/netflix-suffix.txt
 
-          grep -v 'domain:' ./publish/netflix.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-netflix-other.txt
-          curl -sSL ${netflix} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-netflix-other.txt
+          cat ./publish/netflix.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-netflix-other.txt
+          curl -sSL ${netflix} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-netflix-other.txt
+          sort --ignore-case -u ./tmp/temp-netflix-other.txt > ./tmp/netflix-other.txt
 
       - name: Generate disney
         run: |
-          grep 'domain:' ./publish/disney.txt | sed 's/domain://' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-disney-suffix.txt
-          curl -sSL ${disney} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-disney-suffix.txt
+          cat ./publish/disney.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-disney-suffix.txt
+          curl -sSL ${disney} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-disney-suffix.txt
+          sort --ignore-case -u ./tmp/temp-disney-suffix.txt > ./tmp/disney-suffix.txt
 
-          grep -v 'domain:' ./publish/disney.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-disney-other.txt
-          curl -sSL ${disney} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-disney-other.txt
+          cat ./publish/disney.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-disney-other.txt
+          curl -sSL ${disney} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-disney-other.txt
+          sort --ignore-case -u ./tmp/temp-disney-other.txt > ./tmp/disney-other.txt
 
       - name: Generate max
         run: |
-          grep 'domain:' ./publish/hbo.txt | sed 's/domain://' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-max-suffix.txt
-          curl -sSL ${max} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-max-suffix.txt
+          cat ./publish/hbo.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-max-suffix.txt
+          curl -sSL ${max} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-max-suffix.txt
+          sort --ignore-case -u ./tmp/temp-max-suffix.txt > ./tmp/max-suffix.txt
 
-          grep -v 'domain:' ./publish/hbo.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-max-other.txt
-          curl -sSL ${max} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-max-other.txt
+          cat ./publish/hbo.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-max-other.txt
+          curl -sSL ${max} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-max-other.txt
+          sort --ignore-case -u ./tmp/temp-max-other.txt > ./tmp/max-other.txt
 
       - name: Generate primevideo
         run: |
-          grep 'domain:' ./publish/primevideo.txt | sed 's/domain://' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-primevideo-suffix.txt
-          curl -sSL ${primevideo} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-primevideo-suffix.txt
+          cat ./publish/primevideo.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-primevideo-suffix.txt
+          curl -sSL ${primevideo} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-primevideo-suffix.txt
+          sort --ignore-case -u ./tmp/temp-primevideo-suffix.txt > ./tmp/primevideo-suffix.txt
 
-          grep -v 'domain:' ./publish/primevideo.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-primevideo-other.txt
-          curl -sSL ${primevideo} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-primevideo-other.txt
+          cat ./publish/primevideo.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-primevideo-other.txt
+          curl -sSL ${primevideo} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-primevideo-other.txt
+          sort --ignore-case -u ./tmp/temp-primevideo-other.txt > ./tmp/primevideo-other.txt
 
       - name: Generate appletv
         run: |
-          grep 'domain:' ./publish/apple-tvplus.txt | sed 's/domain://' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-appletv-suffix.txt
-          curl -sSL ${appletv} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-appletv-suffix.txt
+          cat ./publish/apple-tvplus.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-appletv-suffix.txt
+          curl -sSL ${appletv} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-appletv-suffix.txt
+          sort --ignore-case -u ./tmp/temp-appletv-suffix.txt > ./tmp/appletv-suffix.txt
 
-          grep -v 'domain:' ./publish/apple-tvplus.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-appletv-other.txt
-          curl -sSL ${appletv} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-appletv-other.txt
+          cat ./publish/apple-tvplus.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-appletv-other.txt
+          curl -sSL ${appletv} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-appletv-other.txt
+          sort --ignore-case -u ./tmp/temp-appletv-other.txt > ./tmp/appletv-other.txt
 
       - name: Generate youtube
         run: |
-          grep 'domain:' ./publish/youtube.txt | sed 's/domain://' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-youtube-suffix.txt
-          curl -sSL ${youtube} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-youtube-suffix.txt
+          cat ./publish/youtube.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-youtube-suffix.txt
+          curl -sSL ${youtube} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-youtube-suffix.txt
+          sort --ignore-case -u ./tmp/temp-youtube-suffix.txt > ./tmp/youtube-suffix.txt
 
-          grep -v 'domain:' ./publish/youtube.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-youtube-other.txt
-          curl -sSL ${youtube} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-youtube-other.txt
+          cat ./publish/youtube.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-youtube-other.txt
+          curl -sSL ${youtube} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-youtube-other.txt
+          sort --ignore-case -u ./tmp/temp-youtube-other.txt > ./tmp/youtube-other.txt
 
       - name: Generate tiktok
         run: |
-          grep 'domain:' ./publish/tiktok.txt | sed 's/domain://' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-tiktok-suffix.txt
-          curl -sSL ${tiktok} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-tiktok-suffix.txt
+          cat ./publish/tiktok.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-tiktok-suffix.txt
+          curl -sSL ${tiktok} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-tiktok-suffix.txt
+          sort --ignore-case -u ./tmp/temp-tiktok-suffix.txt > ./tmp/tiktok-suffix.txt
 
-          grep -v 'domain:' ./publish/tiktok.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-tiktok-other.txt
-          curl -sSL ${tiktok} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-tiktok-other.txt
+          cat ./publish/tiktok.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-tiktok-other.txt
+          curl -sSL ${tiktok} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-tiktok-other.txt
+          sort --ignore-case -u ./tmp/temp-tiktok-other.txt > ./tmp/tiktok-other.txt
 
       - name: Generate bilibili
         run: |
-          grep 'domain:' ./publish/bilibili.txt | sed 's/domain://' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-bilibili-suffix.txt
-          curl -sSL ${bilibili} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-bilibili-suffix.txt
+          cat ./publish/bilibili.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-bilibili-suffix.txt
+          curl -sSL ${bilibili} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-bilibili-suffix.txt
+          sort --ignore-case -u ./tmp/temp-bilibili-suffix.txt > ./tmp/bilibili-suffix.txt
 
-          grep -v 'domain:' ./publish/bilibili.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-bilibili-other.txt
-          curl -sSL ${bilibili} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-bilibili-other.txt
+          cat ./publish/bilibili.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-bilibili-other.txt
+          curl -sSL ${bilibili} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-bilibili-other.txt
+          sort --ignore-case -u ./tmp/temp-bilibili-other.txt > ./tmp/bilibili-other.txt
 
       - name: Generate spotify
         run: |
-          grep 'domain:' ./publish/spotify.txt | sed 's/domain://' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-spotify-suffix.txt
-          curl -sSL ${spotify} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-spotify-suffix.txt
+          cat ./publish/spotify.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-spotify-suffix.txt
+          curl -sSL ${spotify} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-spotify-suffix.txt
+          sort --ignore-case -u ./tmp/temp-spotify-suffix.txt > ./tmp/spotify-suffix.txt
 
-          grep -v 'domain:' ./publish/spotify.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-spotify-other.txt
-          curl -sSL ${spotify} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-spotify-other.txt
+          cat ./publish/spotify.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-spotify-other.txt
+          curl -sSL ${spotify} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-spotify-other.txt
+          sort --ignore-case -u ./tmp/temp-spotify-other.txt > ./tmp/spotify-other.txt
 
       - name: Generate media
         run: |
-          curl -sSL ${media} | grep -Ev '#|IP-' > ./domains/media.list
+          curl -sSL ${media} | grep -Ev '#|IP-CIDR' > ./domains/media.list
 
       - name: Generate games
         run: |
-          grep -v '@cn$' ./publish/category-games.txt | grep 'domain:' | sed -e 's/domain://' -e 's/:@\!cn$//' > ./tmp/temp-games-suffix.txt
-          curl -sSL ${games1} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-games-suffix.txt
-          curl -sSL ${games2} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-games-suffix.txt
+          chmod +x ./tools/removeFrom.py
+          cat ./publish/category-game-platforms-download.txt | grep -v '@cn$' | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-games-suffix.txt
+          cat ./publish/category-games-\!cn.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' >> ./tmp/temp-games-suffix.txt
 
-          grep -Ev '@cn$|domain:' ./publish/category-games.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@\!cn$//' > ./tmp/temp-games-other.txt
-          curl -sSL ${games1} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' >> ./tmp/temp-games-other.txt
-          curl -sSL ${games2} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-games-other.txt
+          # Remove `games-cn` from `games` (suffix)
+          curl -sSL ${games1} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' > ./tmp/games-with-cn-suffix-unsort.txt
+          curl -sSL ${games2} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/games-with-cn-suffix-unsort.txt
+          sort --ignore-case -u ./tmp/games-with-cn-suffix-unsort.txt > ./tmp/games-with-cn-suffix.txt
+          curl -sSL ${games_cn1} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' > ./tmp/games-cn-suffix-deleted-unsort.txt
+          curl -sSL ${games_cn2} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/games-cn-suffix-deleted-unsort.txt
+          sort --ignore-case -u ./tmp/games-cn-suffix-deleted-unsort.txt > ./tmp/games-cn-suffix-deleted.txt
+          python ./tools/removeFrom.py -remove ./tmp/games-cn-suffix-deleted.txt -from ./tmp/games-with-cn-suffix.txt -out ./tmp/games-without-cn-suffix.txt
+
+          cat ./tmp/games-without-cn-suffix.txt >> ./tmp/temp-games-suffix.txt
+          sort --ignore-case -u ./tmp/temp-games-suffix.txt > ./tmp/games-suffix.txt
+
+          cat ./publish/category-game-platforms-download.txt | grep -Ev 'domain:|@cn$' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@\!cn$//' > ./tmp/temp-games-other.txt
+          cat ./publish/category-games-\!cn.txt | grep -Ev 'domain:|@cn$' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@\!cn$//' >> ./tmp/temp-games-other.txt
+
+          # Remove `games-cn` from `games` (other)
+          curl -sSL ${games1} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' > ./tmp/games-with-cn-other-unsort.txt
+          curl -sSL ${games2} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/games-with-cn-other-unsort.txt
+          sort --ignore-case -u ./tmp/games-with-cn-other-unsort.txt > ./tmp/games-with-cn-other.txt
+          curl -sSL ${games_cn1} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' > ./tmp/games-cn-other-deleted-unsort.txt
+          curl -sSL ${games_cn2} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/games-cn-other-deleted-unsort.txt
+          sort --ignore-case -u ./tmp/games-cn-other-deleted-unsort.txt > ./tmp/games-cn-other-deleted.txt
+          python ./tools/removeFrom.py -remove ./tmp/games-cn-other-deleted.txt -from ./tmp/games-with-cn-other.txt -out ./tmp/games-without-cn-other.txt
+
+          cat ./tmp/games-without-cn-other.txt >> ./tmp/temp-games-other.txt
+          sort --ignore-case -u ./tmp/temp-games-other.txt > ./tmp/games-other.txt
 
       - name: Generate ai
         run: |
-          grep 'domain:' ./publish/category-ai-\!cn.txt | sed 's/domain://' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-ai-suffix.txt
-          curl -sSL ${ai} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-ai-suffix.txt
+          cat ./publish/category-ai-\!cn.txt | grep -v '@cn$' | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-ai-suffix.txt
+          curl -sSL ${ai} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-ai-suffix.txt
+          sort --ignore-case -u ./tmp/temp-ai-suffix.txt > ./tmp/ai-suffix.txt
 
-          grep -v 'domain:' ./publish/category-ai-\!cn.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-ai-other.txt
-          curl -sSL ${ai} | grep -Ev '#|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-ai-other.txt
+          cat ./publish/category-ai-\!cn.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-ai-other.txt
+          curl -sSL ${ai} | grep -Ev '#|DOMAIN-SUFFIX,' >> ./tmp/temp-ai-other.txt
+          sort --ignore-case -u ./tmp/temp-ai-other.txt > ./tmp/ai-other.txt
 
       - name: Generate networktest
         run: |
-          grep 'domain:' ./publish/speedtest.txt | sed 's/domain://' | sed -E 's/:@(cn|!cn)$//' > ./tmp/temp-networktest-suffix.txt
-          curl -sSL ${networktest} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-networktest-suffix.txt
+          cat ./publish/category-speedtest.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-networktest-suffix.txt
+          curl -sSL ${networktest} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-networktest-suffix.txt
+          sort --ignore-case -u ./tmp/temp-networktest-suffix.txt > ./tmp/networktest-suffix.txt
 
           cat <<EOF > ./tmp/temp-networktest-other.txt
           DOMAIN-KEYWORD,ipv6-test
@@ -260,58 +315,61 @@ jobs:
           DOMAIN-KEYWORD,test-ipv6
           DOMAIN-KEYWORD,testipv6
           EOF
-          grep -v 'domain:' ./publish/speedtest.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' >> ./tmp/temp-networktest-other.txt
-          curl -sSL ${networktest} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-networktest-other.txt
+          cat ./publish/category-speedtest.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' | sed -E 's/:@(cn|!cn)$//' >> ./tmp/temp-networktest-other.txt
+          curl -sSL ${networktest} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-networktest-other.txt
+          sort --ignore-case -u ./tmp/temp-networktest-other.txt > ./tmp/networktest-other.txt
 
       - name: Generate tld-proxy
         run: |
-          sed 's/domain:/DOMAIN-SUFFIX,/' ./publish/tld-\!cn.txt | sort --ignore-case -u > ./domains/tld-proxy.list
+          cat ./publish/tld-\!cn.txt | sed 's/domain:/DOMAIN-SUFFIX,/' | sort --ignore-case > ./domains/tld-proxy.list
 
       - name: Generate proxy
         run: |
           chmod +x ./gfwlist2dnsmasq/gfwlist2dnsmasq.sh
           ./gfwlist2dnsmasq/gfwlist2dnsmasq.sh -l -o ./tmp/temp-proxy-suffix.txt
-          grep 'domain:' ./publish/geolocation-\!cn.txt | sed -e 's/domain://' -e 's/:@\!cn$//' >> ./tmp/temp-proxy-suffix.txt
-          curl -sSL ${proxy} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-proxy-suffix.txt
+          cat ./publish/geolocation-\!cn.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' >> ./tmp/temp-proxy-suffix.txt
+          curl -sSL ${proxy} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-proxy-suffix.txt
+          sort --ignore-case -u ./tmp/temp-proxy-suffix.txt > ./tmp/proxy-suffix.txt
 
-          grep -v 'domain:' ./publish/geolocation-\!cn.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@\!cn$//' > ./tmp/temp-proxy-other.txt
-          curl -sSL ${proxy} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-proxy-other.txt
+          cat ./publish/geolocation-\!cn.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@\!cn$//' > ./tmp/temp-proxy-other.txt
+          curl -sSL ${proxy} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-proxy-other.txt
+          sort --ignore-case -u ./tmp/temp-proxy-other.txt > ./tmp/proxy-other.txt
 
       - name: Generate cn
         run: |
-          grep 'domain:' ./publish/cn.txt | sed -e 's/domain://' -e 's/:@cn$//' > ./tmp/temp-cn-suffix.txt
-          curl -sSL ${cn1} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' > ./tmp/temp-cn-suffix.txt
-          curl -sSL ${cn2} | grep 'server=' | awk -F'/' '{print $2}' | sort --ignore-case -u >> ./tmp/temp-cn-suffix.txt
+          cat ./publish/cn.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-cn-suffix.txt
+          curl -sSL ${cn1} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-cn-suffix.txt
+          curl -sSL ${cn2} | grep 'server=' | awk -F'/' '{print $2}' >> ./tmp/temp-cn-suffix.txt
+          sort --ignore-case -u ./tmp/temp-cn-suffix.txt > ./tmp/cn-suffix.txt
 
-          grep -v 'domain:' ./publish/cn.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' > ./tmp/temp-cn-other.txt
-          curl -sSL ${cn1} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-cn-other.txt
+          cat ./publish/cn.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' > ./tmp/temp-cn-other.txt
+          curl -sSL ${cn1} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-cn-other.txt
+          sort --ignore-case -u ./tmp/temp-cn-other.txt > ./tmp/cn-other.txt
 
       - name: Generate cn-lite
         run: |
-          grep 'domain:' ./publish/cn.txt | sed -e 's/domain://' -e 's/:@cn$//' > ./tmp/temp-cn-lite-suffix.txt
-          curl -sSL ${cn1} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case -u >> ./tmp/temp-cn-lite-suffix.txt
+          cat ./publish/cn.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-cn-lite-suffix.txt
+          curl -sSL ${cn1} | grep 'DOMAIN-SUFFIX,' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-cn-lite-suffix.txt
+          sort --ignore-case -u ./tmp/temp-cn-lite-suffix.txt > ./tmp/cn-lite-suffix.txt
 
-          grep -v 'domain:' ./publish/cn.txt | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' > ./tmp/temp-cn-lite-other.txt
-          curl -sSL ${cn1} | grep -Ev '#|IP-|DOMAIN-SUFFIX,' | sort --ignore-case -u >> ./tmp/temp-cn-lite-other.txt
+          cat ./publish/cn.txt | grep -v 'domain:' | sed -e 's/full:/DOMAIN,/' -e 's/keyword:/DOMAIN-KEYWORD,/' -e 's/regexp:/DOMAIN-REGEX,/' -e 's/:@cn$//' > ./tmp/temp-cn-lite-other.txt
+          curl -sSL ${cn1} | grep -Ev '#|IP-CIDR|DOMAIN-SUFFIX,' >> ./tmp/temp-cn-lite-other.txt
+          sort --ignore-case -u ./tmp/temp-cn-lite-other.txt > ./tmp/cn-lite-other.txt
 
-      - name: Domain name deduplication
+      - name: Remove redundant domains
         run: |
-          chmod +x ./tools/deduplication.py ./tools/filter.sh
-          rules=(fakeip-filter private apple-cn google-cn games-cn netflix disney max primevideo appletv youtube tiktok bilibili spotify games ai networktest proxy cn cn-lite)
-          for rule in "${rules[@]}"; do
-            ./tools/deduplication.py "./tmp/temp-${rule}-suffix.txt" "./tmp/${rule}-deleted-unsort-suffix.txt"
-            [ ! -f "./tmp/${rule}-deleted-unsort-suffix.txt" ] && touch "./tmp/${rule}-deleted-unsort-suffix.txt"
-            sort --ignore-case "./tmp/${rule}-deleted-unsort-suffix.txt" > "./tmp/${rule}-deleted-sort-suffix.txt"
-            diff "./tmp/${rule}-deleted-sort-suffix.txt" "./tmp/temp-${rule}-suffix.txt" | awk '/^>/{print $2}' | sed 's/^/DOMAIN-SUFFIX,/' > "./tmp/${rule}-without-redundant-suffix.txt"
+          chmod +x ./tools/*.py ./tools/filter.sh
+          archs=(fakeip-filter private apple-cn google-cn games-cn netflix disney max primevideo appletv youtube tiktok bilibili spotify games ai networktest proxy cn cn-lite)
+          for arch in "${archs[@]}"; do
+            python ./tools/findRedundantDomain.py "./tmp/${arch}-suffix.txt" "./tmp/${arch}-deleted-unsort-suffix.txt"
+            [ ! -f "./tmp/${arch}-deleted-unsort-suffix.txt" ] && touch "./tmp/${arch}-deleted-unsort-suffix.txt"
+            sort --ignore-case "./tmp/${arch}-deleted-unsort-suffix.txt" > "./tmp/${arch}-deleted-sort-suffix.txt"
+            python ./tools/removeFrom.py -remove "./tmp/${arch}-deleted-sort-suffix.txt" -from "./tmp/${arch}-suffix.txt" -out "./tmp/nonredundant-${arch}-suffix.txt"
+            cat "./tmp/nonredundant-${arch}-suffix.txt" | sed 's/^/DOMAIN-SUFFIX,/' > "./tmp/done-${arch}-suffix.txt"
+            cat "./tmp/${arch}-other.txt" "./tmp/done-${arch}-suffix.txt" | sort --ignore-case -u > "./tmp/${arch}-redundant.txt"
 
-            cat "./tmp/temp-${rule}-other.txt" "./tmp/${rule}-without-redundant-suffix.txt" | sort --ignore-case -u > "./tmp/${rule}-redundant.txt"
-
-            ./tools/filter.sh "./tmp/${rule}-redundant.txt" > "./domains/${rule}.list"
+            ./tools/filter.sh "./tmp/${arch}-redundant.txt" > "./domains/${arch}.list"
           done
-
-          # Delete `games-cn` from `games`
-          diff ./domains/games-cn.list ./domains/games.list | awk '/^>/{print $2}' > ./tmp/temp-games.list
-          mv -f ./tmp/temp-games.list ./domains/games.list
 
           rm -rf ./tmp* ./publish*
 
