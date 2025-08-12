@@ -2,21 +2,21 @@
 
 input_file=$1
 
-awk -F ',' '
+awk -F ':' '
 {
     lines[NR] = $0
-    if ($1 == "DOMAIN-SUFFIX") {
+    if ($1 == "domain") {
         suffix_set[$2] = 1
     }
 }
 END {
     for (i = 1; i <= NR; i++) {
         line = lines[i]
-        split(line, parts, ",")
+        split(line, parts, ":")
         type = parts[1]
-        if (type == "DOMAIN-SUFFIX") {
+        if (type == "domain") {
             print line
-        } else if (type == "DOMAIN") {
+        } else if (type == "full") {
             domain = parts[2]
             n = split(domain, arr, ".")
             found = 0
