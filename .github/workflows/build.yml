@@ -79,7 +79,11 @@ jobs:
           mkdir -p ./tmp/ ./domains/
           curl -sSL ${fakeip_filter} | perl -ne '/^[\*\+]\.*([^\*\+]+)\n$/ && print "$1\n"' | sort --ignore-case > ./tmp/fakeip-filter-suffix.txt
 
-          curl -sSL ${fakeip_filter} | grep -Ev '#|\+|\*|Mijia' | sed 's/^/DOMAIN,/' > ./tmp/temp-fakeip-filter-other.txt
+          curl -sSL ${fakeip_filter} | grep -Ev '#|\+|\*| ' | sed 's/^/DOMAIN,/' > ./tmp/temp-fakeip-filter-other.txt
+          cat <<EOF >> ./tmp/temp-fakeip-filter-other.txt
+          DOMAIN-REGEX,^Mijia\sCloud$
+          DOMAIN-REGEX,^[^.]+$
+          EOF
           curl -sSL ${fakeip_filter} | grep '\.\*' | sed -e 's/\./\\./g' -e 's/\*/\[\^\.\]\+/g' -e 's/^\+/\.\*/' -e 's/^/\^/; s/$/\$/' -e 's/^/DOMAIN-REGEX,/' >> ./tmp/temp-fakeip-filter-other.txt
           sort --ignore-case ./tmp/temp-fakeip-filter-other.txt > ./tmp/fakeip-filter-other.txt
 
@@ -111,6 +115,7 @@ jobs:
           EOF
           cat ./publish/private.txt | perl -ne '/^(full):([^:]+)(\n$|:@.+)/ && print "DOMAIN,$2\n"' >> ./tmp/temp-private-other.txt
           curl -sSL ${private} | awk '/DOMAIN,/' >> ./tmp/temp-private-other.txt
+          echo "DOMAIN-REGEX,^[^.]+$" >> ./tmp/temp-private-other.txt
           sort --ignore-case -u ./tmp/temp-private-other.txt > ./tmp/private-other.txt
 
       - name: Generate ads
