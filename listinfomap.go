@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -117,16 +116,4 @@ func (lm *ListInfoMap) ToPlainText(exportListsMap []string) (map[string][]byte, 
 		}
 	}
 	return filePlainTextBytesMap, nil
-}
-
-// ToGFWList returns the content of the list to be generated into GFWList format
-// that user wants in bytes format.
-func (lm *ListInfoMap) ToGFWList(togfwlist string) ([]byte, error) {
-	if togfwlist != "" {
-		if listinfo := (*lm)[fileName(strings.ToUpper(togfwlist))]; listinfo != nil {
-			return listinfo.ToGFWList(), nil
-		}
-		return nil, errors.New("no such list: " + togfwlist)
-	}
-	return nil, nil
 }
