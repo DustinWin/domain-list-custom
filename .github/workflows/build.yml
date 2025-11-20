@@ -54,13 +54,13 @@ jobs:
           go-version-file: ./go.mod
 
       - name: Checkout v2fly/domain-list-community
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: v2fly/domain-list-community
           path: community
 
       - name: Checkout cokebar/gfwlist2dnsmasq
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: cokebar/gfwlist2dnsmasq
           path: gfwlist2dnsmasq
