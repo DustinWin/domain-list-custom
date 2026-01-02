@@ -93,9 +93,9 @@ jobs:
           DOMAIN,local.adguard.org
           DOMAIN,static.adtidy.org
           EOF
-          curl -sSL ${fakeip_filter} | awk '!/[#+* ]/ && /ntp|stun|time/' | sed 's/^/DOMAIN,/' >> ./tmp/temp-fakeip-filter-lite.txt
-          curl -sSL ${fakeip_filter} | awk '/ntp|stun|time/' | perl -ne '/^[\+\*]\.([^\*]+)\n$/ && print "DOMAIN-SUFFIX,$1\n"' >> ./tmp/temp-fakeip-filter-lite.txt
-          curl -sSL ${fakeip_filter} | awk '/ntp|stun|time/ && /\.\*/' | sed -e 's/\./\\./g' -e 's/\*/\[\^\.\]\+/g' -e 's/^\+/\.\*/' -e 's/^/DOMAIN-REGEX,\^/; s/$/\$/' >> ./tmp/temp-fakeip-filter-lite.txt
+          curl -sSL ${fakeip_filter} | awk '!/[#+* ]/ && /(ntp|stun|time)/' | sed 's/^/DOMAIN,/' >> ./tmp/temp-fakeip-filter-lite.txt
+          curl -sSL ${fakeip_filter} | awk '/(ntp|stun|time)/' | perl -ne '/^[\+\*]\.([^\*]+)\n$/ && print "DOMAIN-SUFFIX,$1\n"' >> ./tmp/temp-fakeip-filter-lite.txt
+          curl -sSL ${fakeip_filter} | awk '/(ntp|stun|time)/ && /\.\*/' | sed -e 's/\./\\./g' -e 's/\*/\[\^\.\]\+/g' -e 's/^\+/\.\*/' -e 's/^/DOMAIN-REGEX,\^/; s/$/\$/' >> ./tmp/temp-fakeip-filter-lite.txt
           sort --ignore-case ./tmp/temp-fakeip-filter-lite.txt > ./domains/fakeip-filter-lite.list
 
       - name: Generate `private`
@@ -128,7 +128,7 @@ jobs:
 
       - name: Generate `applications`
         run: |
-          curl -sSL ${applications1} | awk '/^DOMAIN,|^DOMAIN-SUFFIX,|^DOMAIN-KEYWORD,|^PROCESS-NAME,/' > ./tmp/temp-applications.txt
+          curl -sSL ${applications1} | awk '/(^DOMAIN,|^DOMAIN-SUFFIX,|^DOMAIN-KEYWORD,|^PROCESS-NAME,)/' > ./tmp/temp-applications.txt
           curl -sSL ${applications2} | perl -ne '/^\s*-\s+(.*)/ && print "$1\n"' >> ./tmp/temp-applications.txt
           sort --ignore-case -u ./tmp/temp-applications.txt > ./domains/applications.list
 
@@ -148,11 +148,11 @@ jobs:
 
       - name: Generate `google-cn`
         run: |
-          cat ./publish/google.txt | perl -ne '/^(domain):([^:]+):@cn/ && print "$2\n"' > ./tmp/google-cn-suffix.txt
+          cat ./publish/google.txt | perl -ne '/^(domain):([^:]+):@cn/ && print "$2\n"' | awk '!/(google|gstatic)/' > ./tmp/google-cn-suffix.txt
 
           cat ./publish/google.txt | perl -ne '/^(full):([^:]+):@cn/ && print "DOMAIN,$2\n"' > ./tmp/temp-google-cn-other.txt
           curl -sSL ${google_cn} | perl -ne '/server=\/([^\/]+)/ && print "DOMAIN,$1\n"' >> ./tmp/temp-google-cn-other.txt
-          sort --ignore-case -u ./tmp/temp-google-cn-other.txt > ./tmp/google-cn-other.txt
+          cat ./tmp/temp-google-cn-other.txt | awk '!/(google|gstatic)/' | sort --ignore-case -u > ./tmp/google-cn-other.txt
 
       - name: Generate `games-cn`
         run: |
@@ -262,7 +262,7 @@ jobs:
 
       - name: Generate `media`
         run: |
-          curl -sSL ${media} | awk '/^DOMAIN,|^DOMAIN-SUFFIX,/' | sort --ignore-case > ./domains/media.list
+          curl -sSL ${media} | awk '/(^DOMAIN,|^DOMAIN-SUFFIX,)/' | sort --ignore-case > ./domains/media.list
 
       - name: Generate `games`
         run: |
