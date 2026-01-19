@@ -147,10 +147,10 @@ jobs:
 
       - name: Generate `google-cn`
         run: |
-          cat ./publish/google.txt | perl -ne '/^(domain):([^:]+):@cn/ && print "$2\n"' | awk '!/(google|gstatic)/' > ./tmp/google-cn-suffix.txt
-          curl -sSL ${google_cn} | perl -ne '/server=\/([^\/]+)/ && print "$1\n"' | awk '!/(google|gstatic)/' >> ./tmp/google-cn-suffix.txt
+          cat ./publish/google.txt | perl -ne '/^(domain):([^:]+):@cn/ && print "$2\n"' > ./tmp/google-cn-suffix.txt
+          curl -sSL ${google_cn} | perl -ne '/server=\/([^\/]+)/ && print "$1\n"' >> ./tmp/google-cn-suffix.txt
 
-          cat ./publish/google.txt | perl -ne '/^(full):([^:]+):@cn/ && print "DOMAIN,$2\n"' | awk '!/(google|gstatic)/' > ./tmp/temp-google-cn-other.txt
+          cat ./publish/google.txt | perl -ne '/^(full):([^:]+):@cn/ && print "DOMAIN,$2\n"' > ./tmp/temp-google-cn-other.txt
 
       - name: Generate `games-cn`
         run: |
