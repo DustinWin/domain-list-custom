@@ -1,7 +1,7 @@
 # 文件说明
 ## 1. 文件类型
 ① 重构上游项目 [v2fly/domain-list-community](https://github.com/v2fly/domain-list-community)，生成供下游项目 [DustinWin/ruleset_geodata](https://github.com/DustinWin/ruleset_geodata) 使用的 DOMAIN 数据源文件  
-② 数据源文件为 [mihomo 内核](https://github.com/MetaCubeX/mihomo) rule-set 规则集文件（.list 格式），包含 `DOMAIN`、`DOMAIN-SUFFIX`、`DOMAIN-KEYWORD`、`DOMAIN-REGEX` 和 `PROCESS-NAME` 规则类型，配置 `behavior: classical` 和 `format: text` 后可直接使用
+② 数据源文件为 [mihomo 内核](https://github.com/MetaCubeX/mihomo) rule-set 规则集文件（.list 格式），主要包含 `DOMAIN`、`DOMAIN-SUFFIX` 和 `DOMAIN-KEYWORD` 规则类型，配置 `behavior: classical` 和 `format: text` 后可直接使用
 ## 2. 数据去重
 ① 去除 `DOMAIN-SUFFIX` 类型中冗余的子域名，如：
 ```
