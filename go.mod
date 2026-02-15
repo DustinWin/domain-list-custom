@@ -3,7 +3,7 @@ module domain-list-custom
 go 1.25.6
 
 require (
-	github.com/v2fly/v2ray-core/v5 v5.44.1
+	github.com/v2fly/v2ray-core/v5 v5.45.1
 	google.golang.org/protobuf v1.36.11
 )
 
