@@ -144,7 +144,7 @@ jobs:
       - name: Generate `apple-cn`
         run: |
           cat ./publish/apple.txt | perl -ne '/^(domain):([^:]+):@cn/ && print "$2\n"' > ./tmp/temp-apple-cn-suffix.txt
-          curl -sSL ${apple_cn} | perl -ne '/server=\/([^\/]+)/ && print "$1\n"' >> ./tmp/temp-apple-cn-suffix.txt
+          curl -sSL ${apple_cn} | awk '!/# Disabled/' | perl -ne '/server=\/([^\/]+)/ && print "$1\n"' >> ./tmp/temp-apple-cn-suffix.txt
           sort --ignore-case -u ./tmp/temp-apple-cn-suffix.txt > ./tmp/apple-cn-suffix.txt
 
           cat ./publish/apple.txt | perl -ne '/^(full):([^:]+):@cn/ && print "DOMAIN,$2\n"' > ./tmp/temp-apple-cn-other.txt
@@ -154,7 +154,7 @@ jobs:
       - name: Generate `google-cn`
         run: |
           cat ./publish/google.txt | perl -ne '/^(domain):([^:]+):@cn/ && print "$2\n"' > ./tmp/temp-google-cn-suffix.txt
-          curl -sSL ${google_cn} | perl -ne '/server=\/([^\/]+)/ && print "$1\n"' >> ./tmp/temp-google-cn-suffix.txt
+          curl -sSL ${google_cn} | awk '!/# Disabled/' | perl -ne '/server=\/([^\/]+)/ && print "$1\n"' >> ./tmp/temp-google-cn-suffix.txt
           sort --ignore-case -u ./tmp/temp-google-cn-suffix.txt > ./tmp/google-cn-suffix.txt
 
           cat ./publish/google.txt | perl -ne '/^(full):([^:]+):@cn/ && print "DOMAIN,$2\n"' > ./tmp/temp-google-cn-other.txt
@@ -372,24 +372,21 @@ jobs:
       - name: Generate `cn`
         run: |
           cat ./publish/cn.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-cn-suffix.txt
-          curl -sSL ${cn1} | awk '/DOMAIN-SUFFIX,/' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-cn-suffix.txt
-          curl -sSL ${cn2} | perl -ne '/server=\/([^\/]+)/ && print "$1\n"' >> ./tmp/temp-cn-suffix.txt
+          curl -sSL ${cn2} | awk '!/# Disabled/' | perl -ne '/server=\/([^\/]+)/ && print "$1\n"' >> ./tmp/temp-cn-suffix.txt
           sort --ignore-case -u ./tmp/temp-cn-suffix.txt > ./tmp/cn-suffix.txt
 
           cat ./publish/cn.txt | perl -ne '/^(full):([^:]+)(\n$|:@.+)/ && print "DOMAIN,$2\n"' > ./tmp/temp-cn-other.txt
           cat ./publish/cn.txt | perl -ne '/^(keyword):([^:]+)(\n$|:@.+)/ && print "DOMAIN-KEYWORD,$2\n"' >> ./tmp/temp-cn-other.txt
-          curl -sSL ${cn1} | awk '/(DOMAIN,|DOMAIN-KEYWORD,)/' >> ./tmp/temp-cn-other.txt
           sort --ignore-case -u ./tmp/temp-cn-other.txt > ./tmp/cn-other.txt
 
       - name: Generate `cn-lite`
         run: |
-          cat ./publish/cn.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' > ./tmp/temp-cn-lite-suffix.txt
+          cat ./publish/cn.txt | perl -ne '/^(domain):([^:]+)(\n$|:@.+)/ && print "$2\n"' | sort --ignore-case > ./tmp/temp-cn-lite-suffix.txt
           curl -sSL ${cn1} | awk '/DOMAIN-SUFFIX,/' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-cn-lite-suffix.txt
           sort --ignore-case -u ./tmp/temp-cn-lite-suffix.txt > ./tmp/cn-lite-suffix.txt
 
           cat ./publish/cn.txt | perl -ne '/^(full):([^:]+)(\n$|:@.+)/ && print "DOMAIN,$2\n"' > ./tmp/temp-cn-lite-other.txt
           cat ./publish/cn.txt | perl -ne '/^(keyword):([^:]+)(\n$|:@.+)/ && print "DOMAIN-KEYWORD,$2\n"' >> ./tmp/temp-cn-lite-other.txt
-          curl -sSL ${cn1} | awk '/(DOMAIN,|DOMAIN-KEYWORD,)/' >> ./tmp/temp-cn-lite-other.txt
           sort --ignore-case -u ./tmp/temp-cn-lite-other.txt > ./tmp/cn-lite-other.txt
 
       - name: Remove redundant domains
