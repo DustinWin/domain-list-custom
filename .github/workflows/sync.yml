@@ -23,7 +23,7 @@ jobs:
         with:
           upstream_sync_repo: Loyalsoldier/domain-list-custom
           upstream_sync_branch: master
-          target_sync_branch: master
+          target_sync_branch: main
           target_repo_token: ${{ secrets.GITHUB_TOKEN }}
           test_mode: false
 
