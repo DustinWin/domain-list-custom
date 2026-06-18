@@ -227,8 +227,10 @@ jobs:
 
           cat <<EOF > ./tmp/temp-private-other.txt
           DOMAIN,board.zash.run.place
+          DOMAIN,dash.sing-box.app
           DOMAIN,metacubex.github.io
           DOMAIN,metacubexd.pages.dev
+          DOMAIN,sing-box-dashboard.sagernet.org
           DOMAIN,yacd.metacubex.one
           EOF
           cat ./publish/private.txt | perl -ne '/^(full):([^:]+)(\n$|:\@.+)/ && print "DOMAIN,$2\n"' >> ./tmp/temp-private-other.txt
