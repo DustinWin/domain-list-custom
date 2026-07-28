@@ -1,6 +1,6 @@
-module github.com/Loyalsoldier/domain-list-custom
+module domain-list-custom
 
-go 1.25.12
+go 1.26.5
 
 require (
 	github.com/v2fly/v2ray-core/v5 v5.52.0
@@ -10,5 +10,5 @@ require (
 require (
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 )
