@@ -449,6 +449,7 @@ jobs:
         run: |
           cat ./publish/test-ipv6.txt | perl -ne '/^(domain):([^:]+)(\n$|:\@!cn$)/ && print "$2\n"' > ./tmp/temp-networktest-suffix.txt
           cat ./publish/category-speedtest.txt | perl -ne '/^(domain):([^:]+)(\n$|:\@!cn$)/ && print "$2\n"' >> ./tmp/temp-networktest-suffix.txt
+          cat ./publish/category-ip-geo-detect.txt | perl -ne '/^(domain):([^:]+)(\n$|:\@!cn$)/ && print "$2\n"' >> ./tmp/temp-networktest-suffix.txt
           curl -fsSL "${networktest}" | awk '/DOMAIN-SUFFIX,/' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-networktest-suffix.txt
           sort --ignore-case -u ./tmp/temp-networktest-suffix.txt > ./tmp/networktest-suffix.txt
 
@@ -456,6 +457,8 @@ jobs:
           cat ./publish/test-ipv6.txt | perl -ne '/^(keyword):([^:]+)(\n$|:\@!cn$)/ && print "DOMAIN-KEYWORD,$2\n"' >> ./tmp/temp-networktest-other.txt
           cat ./publish/category-speedtest.txt | perl -ne '/^(full):([^:]+)(\n$|:\@!cn$)/ && print "DOMAIN,$2\n"' >> ./tmp/temp-networktest-other.txt
           cat ./publish/category-speedtest.txt | perl -ne '/^(keyword):([^:]+)(\n$|:\@!cn$)/ && print "DOMAIN-KEYWORD,$2\n"' >> ./tmp/temp-networktest-other.txt
+          cat ./publish/category-ip-geo-detect.txt | perl -ne '/^(full):([^:]+)(\n$|:\@!cn$)/ && print "DOMAIN,$2\n"' >> ./tmp/temp-networktest-other.txt
+          cat ./publish/category-ip-geo-detect.txt | perl -ne '/^(keyword):([^:]+)(\n$|:\@!cn$)/ && print "DOMAIN-KEYWORD,$2\n"' >> ./tmp/temp-networktest-other.txt
           curl -fsSL "${networktest}" | awk '/(DOMAIN,|DOMAIN-KEYWORD,)/' >> ./tmp/temp-networktest-other.txt
           sort --ignore-case -u ./tmp/temp-networktest-other.txt > ./tmp/networktest-other.txt
 
