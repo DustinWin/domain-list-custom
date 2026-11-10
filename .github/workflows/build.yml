@@ -170,7 +170,8 @@ jobs:
 
           # suffix for `cn`
           cat ./publish/cn.txt | perl -ne '/^(domain):([^:]+)(\n$|:\@.+)/ && print "$2\n"' > ./tmp/temp-cn-unsort-suffix.txt
-          curl -fsSL "${cn1}" | awk '!/# Disabled/' | perl -ne '/server=\/([^\/]+)/ && print "$1\n"' >> ./tmp/temp-cn-unsort-suffix.txt
+          # Ignore bare TLDs from dnsmasq; intentional CN TLDs come from community.
+          curl -fsSL "${cn1}" | awk '!/# Disabled/' | perl -ne '/server=\/([^\/]+\.[^\/]+)\// && print "$1\n"' >> ./tmp/temp-cn-unsort-suffix.txt
           sort --ignore-case -u ./tmp/temp-cn-unsort-suffix.txt > ./tmp/temp-cn-sort-suffix.txt
 
           # domain for `cn`
