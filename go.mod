@@ -1,6 +1,6 @@
 module domain-list-custom
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/v2fly/v2ray-core/v5 v5.56.0
@@ -10,5 +10,5 @@ require (
 require (
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
 )
